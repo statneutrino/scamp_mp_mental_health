@@ -60,7 +60,7 @@ psytools_f1 <- psytools_f1 %>%
     na_matches = "never")
 
 psytools <- full_join(psytools_bl, psytools_f1, by="SX_42_UUID", na_matches = "never") %>%
-  select(SX_42_UUID, PSYTOOLS_UID_BL, BATTERYVERSION_BL, PSYTOOLS_UID_F1, BATTERYVERSION_F1)
+  select(SX_42_UUID, PSYTOOLS_UID_BL, BATTERYVERSION_BL, PSYTOOLS_UID_F1, BATTERYVERSION_F1, everything())
 
 ### Now join SX_42 relevant categories
 sx_42_link <- sx_42 %>% 
