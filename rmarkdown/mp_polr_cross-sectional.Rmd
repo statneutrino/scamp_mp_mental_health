@@ -1,0 +1,156 @@
+---
+title: "Proportional Odds Models"
+author: "Alex Spiers"
+date: "18/02/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readxl)
+library(glue)
+
+exposure_df <- read_excel("./data/interaction_options.xlsx")
+
+source("./scripts/2_variable_processing.R")
+source("./scripts/5_prop_odds_modelling.R")
+scamp_f1 <- psytools %>%
+  filter(!is.na(PSYTOOLS_UID_F1)) %>%
+  filter(!is.na(phq_sum) & !is.na(gad_sum)) %>%
+  as.data.frame()
+
+
+```
+
+## PHQ9 Proportional Odds Models Cross-sectional MOdels
+
+```{r phq_models_f1, echo=FALSE, results='asis'}
+df <- exposure_df %>% filter(factor_continuous == "continuous" & timepoint == "F1")
+
+for(row in 1:nrow(df)) { # ){
+
+  
+  #### Generate Tables ####
+  cat("\n\n")
+  cat(paste0("#### Depression Model for exposure: **", df$exposure_full[row],"**"))
+  cat("\n\n")
+  
+  
+  if(!file.exists(paste0('./models/polr/phq_polr_', df$exposure_var[row], '.rds'))){
+  
+    internet_option <- ifelse(df$device_control[row] == "internet", TRUE, FALSE)
+  
+    phq_polr <- fit_phq_polr_F1(df$exposure_var[row], scamp_f1, internet = internet_option, device_adjust = TRUE)
+    
+    models <- list(
+      "Exposure Only" = phq_polr$model_uni,
+      "Demog" = phq_polr$model_demo,
+      "Demog + Sleep F1" = phq_polr$model_sleep,
+      "Demog + PA" = phq_polr$model_phys
+      )
+  
+    exposure_var <-  df$exposure_full[row]
+    names(exposure_var) <- df$exposure_var[row]
+    
+    tbl_summary <- modelsummary::modelsummary(
+      models,
+      exponentiate = TRUE,
+      statistic = "conf.int",
+      coef_map = exposure_var,
+      gof_omit = "edf|Log.Lik"
+      )
+    
+    named_coef <- c(df$exposure_var[row])
+    names(named_coef) <- df$exposure_full[row]
+    
+    p <- jtools::plot_coefs(phq_polr$model_uni, phq_polr$model_demo, 
+                       phq_polr$model_sleep, phq_polr$model_phys,
+                       coefs = named_coef, exp = TRUE) + labs(x = "OR with 95% CI")
+    
+    output_list <- list(
+      tbl_summary = tbl_summary,
+      coef_plot = p
+    )
+    
+    saveRDS(output_list, paste0('./models/polr/phq_polr_', df$exposure_var[row], '.rds'))
+    
+  } else {
+    
+    load_list = readRDS(paste0('./models/polr/phq_polr_', df$exposure_var[row], '.rds'))
+    tbl_summary <- load_list$tbl_summary
+    p <- load_list$coef_plot
+    
+  }
+  print(tbl_summary)
+  
+  print(p)
+}
+```
+
+## GAD7 Proportional Odds Models
+
+```{r gad_models_f1, echo=FALSE, results='asis'}
+df <- exposure_df %>% filter(factor_continuous == "continuous" & timepoint == "F1")
+
+for(row in 1:nrow(df)) { # ){
+  df <- exposure_df %>% filter(factor_continuous == "continuous" & timepoint == "BL")
+  
+  #### Generate Tables ####
+  cat("\n\n")
+  cat(paste0("#### Anxiety Model for exposure: **", df$exposure_full[row],"**"))
+  cat("\n\n")
+  
+  
+  if(!file.exists(paste0('./models/polr/gad_polr_', df$exposure_var[row], '.rds'))){
+  
+    internet_option <- ifelse(df$device_control[row] == "internet", TRUE, FALSE)
+  
+    gad_polr <- fit_gad_polr_F1(df$exposure_var[row], scamp_f1, internet = internet_option, device_adjust = TRUE)
+    
+    models <- list(
+      "Exposure Only" = gad_polr$model_uni,
+      "Demog" = gad_polr$model_demo,
+      "Demog + SDQ BL + Sleep BL" = gad_polr$model_sleep,
+      "Demog + SDQ BL + PA" = gad_polr$model_phys
+      )
+  
+    exposure_var <-  df$exposure_full[row]
+    names(exposure_var) <- df$exposure_var[row]
+    
+    tbl_summary <- modelsummary::modelsummary(
+      models,
+      exponentiate = TRUE,
+      statistic = "conf.int",
+      coef_map = exposure_var,
+      gof_omit = "edf|Log.Lik"
+      )
+    
+    named_coef <- c(df$exposure_var[row])
+    names(named_coef) <- df$exposure_full[row]
+    
+    p <- jtools::plot_coefs(gad_polr$model_uni, gad_polr$model_demo, 
+                       gad_polr$model_sleep, gad_polr$model_phys,
+                       coefs = named_coef, exp = TRUE) + labs(x = "OR with 95% CI")
+    
+    output_list <- list(
+      tbl_summary = tbl_summary,
+      coef_plot = p
+    )
+    
+    saveRDS(output_list, paste0('./models/polr/phq_polr_', df$exposure_var[row], '.rds'))
+    
+  } else {
+    
+    load_list = readRDS(paste0('./models/polr/gad_polr_', df$exposure_var[row], '.rds'))
+    tbl_summary <- load_list$tbl_summary
+    p <- load_list$coef_plot
+    
+  }
+  print(tbl_summary)
+  
+  print(p)
+}
+```
+
+

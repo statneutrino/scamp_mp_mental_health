@@ -1,0 +1,138 @@
+---
+title: "Descriptive Tables & EDA"
+author: "Alex Spiers"
+date: "14/02/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(arsenal)
+library(tidyverse)
+library(jtools)
+
+# psytools <- read.csv("./data/psytools_cleaned.csv")
+source("./scripts/2_variable_processing.R")
+
+std_controls <- tableby.control(
+  numeric.stats = c("medianq1q3", "Nmiss"),
+  cat.stats = c("countpct", "Nmiss"),
+  digits = 2 
+)
+
+mean_controls <- tableby.control(
+  numeric.stats = c("meansd", "Nmiss"),
+  cat.stats = c("countpct", "Nmiss"),
+  digits = 2 
+)
+
+scamp <- psytools %>%
+  select(
+    SCAMP_ID, PSYTOOLS_UID_BL, BATTERYVERSION_BL, PSYTOOLS_UID_F1, BATTERYVERSION_F1, ETHNICITY_DESC,
+    SCHOOL_ID_BL:AGE_F1, SCHOOL_IND_F1:IMD_QUINTILE
+  )
+
+## Subset sample by have taken follow-up psytools
+scamp_f1 <- scamp %>% 
+  filter(!is.na(PSYTOOLS_UID_F1)) %>%
+  filter(!is.na(phq_sum) & !is.na(gad_sum))
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r demographics, results = 'asis'}
+## Create table for demographics
+
+demographics <- tableby(
+  list(SEX) ~ AGE_BL + AGE_F1 + ETHNICITY_DESC + parent_occ + as.factor(IMD_QUINTILE) +
+    as.factor(SCHOOL_IND_F1) + alcohol_cat + smoking_cat + cannabis_cat,
+  data = scamp_f1, control = std_controls
+)
+summary(demographics)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r exposure_descriptive, results = 'asis'}
+## Create table for demographics
+
+exposure <- tableby(
+  list(SEX) ~ call_own_weekday_BL + call_own_weekday_F1 + call_own_weekend_BL + call_own_weekend_F1 +
+    call_others_weekday_BL + call_others_weekday_F1 + call_others_weekend_BL + call_others_weekend_F1 +
+    sns_mp_weekday_BL + sns_mp_weekday_F1 + sns_mp_weekend_BL + sns_mp_weekend_F1 +
+    internet_weekday_BL + internet_weekend_BL + internet_weekday_F1 + internet_weekend_F1 +
+    text_weekday_BL + text_weekend_BL +  text_weekday_F1 + text_weekend_F1 + 
+    im_weekday_BL + im_weekend_BL +  im_weekday_F1 + im_weekend_F1,
+  data = scamp_f1, control = std_controls
+)
+summary(exposure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r mh_descriptive, results = 'asis'}
+## Create table for demographics
+
+mean_controls <- tableby.control(
+  numeric.stats = c("meansd", "Nmiss"),
+  cat.stats = c("countpct", "Nmiss"),
+  digits = 2 
+)
+
+mh_mean <- tableby(
+  list(SEX) ~ phq_sum + gad_sum + sebdtot_BL + semotion_BL + sconduct_BL+shyper_BL+
+    speer_BL + sprosoc_BL + sebdtot_F1 + semotion_F1 + sconduct_F1 + shyper_F1 + 
+    speer_F1 + sprosoc_F1,
+  data = scamp_f1, control = mean_controls
+)
+summary(mh_mean)
+```
+
+## Make plots to understand potential confounders and mediators
+
+#### Sleep Duration at Baseline and Relationship with MH
+
+```{r sleep_BL}
+hist(scamp_f1$sleep_dtn_weekday_BL)
+ggplot(aes(x=sleep_dtn_weekday_BL, y=phq_sum), data=scamp_f1) + geom_smooth() + geom_jitter(point=0.2)
+ggplot(aes(x=sleep_dtn_weekday_BL, y=gad_sum), data=scamp_f1) + geom_smooth() + geom_jitter(point=0.2)
+hist(scamp_f1$sleep_dtn_weekend_BL)
+ggplot(aes(x=sleep_dtn_weekend_BL, y=phq_sum), data=scamp_f1) + geom_smooth() + geom_jitter(point=0.2)
+ggplot(aes(x=sleep_dtn_weekend_BL, y=gad_sum), data=scamp_f1) + geom_smooth() + geom_jitter(point=0.2)
+```
+
+#### Sleep Duration at Baseline and Relationship with MP at Baseline
+
+```{r sleep_BL_MP}
+
+ggplot(aes(x=sleep_dtn_weekday_BL, y=internet_avg_BL), data=scamp_f1) + geom_smooth() + geom_jitter(point=0.2)
+ggplot(aes(x=sleep_dtn_weekday_BL, y=calls_own_avg_BL), data=scamp_f1) + geom_smooth() + geom_jitter(point=0.2)
+ggplot(aes(x=sleep_dtn_weekday_BL, y=im_avg_BL), data=scamp_f1) + geom_smooth() + geom_jitter(point=0.2)
+
+```
+
+#### Sleep Duration at F1 and Relationship with MH
+
+```{r sleep_F1}
+hist(scamp_f1$sleep_dtn_weekday_F1)
+ggplot(aes(x=sleep_dtn_weekday_F1, y=phq_sum), data=scamp_f1) + geom_smooth() + geom_jitter(point=0.2)
+ggplot(aes(x=sleep_dtn_weekday_F1, y=gad_sum), data=scamp_f1) + geom_smooth() + geom_jitter(point=0.2)
+hist(scamp_f1$sleep_dtn_weekend_F1)
+ggplot(aes(x=sleep_dtn_weekend_F1, y=phq_sum), data=scamp_f1) + geom_smooth() + geom_jitter(point=0.2)
+ggplot(aes(x=sleep_dtn_weekend_F1, y=gad_sum), data=scamp_f1) + geom_smooth() + geom_jitter(point=0.2)
+```
+
+#### Physical Activity F1 
+
+```{r physical_F1}
+hist(scamp_f1$physical_activity)
+ggplot(aes(x=physical_activity, y=phq_sum), data=scamp_f1) + geom_smooth() + geom_jitter(point=0.2)
+ggplot(aes(x=physical_activity, y=gad_sum), data=scamp_f1) + geom_smooth()+ geom_jitter(point=0.2)
+
+```

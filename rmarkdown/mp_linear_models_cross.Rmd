@@ -1,0 +1,294 @@
+---
+title: "Untitled"
+author: "Alex Spiers"
+date: "16/02/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(arsenal)
+library(readxl)
+library(tidyverse)
+library(jtools)
+library(lme4)
+library(lmerTest)
+library(glue)
+library(ggpubr)
+library(huxtable)
+
+exposure_df <- read_excel("./data/exposure_options.xlsx")
+source("./scripts/0_helper_functions.R")
+source("./scripts/2_variable_processing.R")
+scamp_f1 <- psytools %>% 
+  filter(!is.na(PSYTOOLS_UID_F1)) %>%
+  filter(!is.na(phq_sum) & !is.na(gad_sum)) %>%
+  as.data.frame()
+```
+
+## Loop Fitting for Models for BASELINE MP usage on F1 Depression and Anxiety - "Raw" factor variables
+
+```{r baseline_factor, echo=FALSE, results='asis'}
+
+df <- exposure_df %>% filter(factor_continuous == "factor" & timepoint == "F1")
+
+for(row in 1:nrow(df)) { # ){
+  
+  ### DEPRESSION MODELS ###
+  
+  cat("\n")
+  cat("\n")
+  cat(paste0("#### Depression Model for exposure: **", df$exposure_full[row],"**"))
+  cat("\n")
+  cat("\n")
+  
+  if(!file.exists(paste0('./models/phq_', df$exposure_var[row], '.rds'))){
+    phq_model <- fit_phq_lm_F1(df$exposure_var[row], scamp_f1)
+    
+    table_summary <- jtools::export_summs(
+        phq_model$model_uni_RE, phq_model$model_demo, 
+        phq_model$model_phys, phq_model$model_sleep, phq_model$model_all,
+        error_format = "[{conf.low}, {conf.high}]",
+        # coefs = c("sns_mp_avg_BL", "ETHNICITY_DESCAsian"),
+        conf.method = "profile")
+    
+    coef_names <- paste0(df$exposure_var[row], levels(scamp_f1[,df$exposure_var[row]])[-1])
+    names(coef_names) <- levels(scamp_f1[,df$exposure_var[row]])[-1]
+    p <- plot_coefs(phq_model$model_uni_RE, phq_model$model_demo, phq_model$model_sleep, phq_model$model_phys, 
+                    coefs = coef_names )
+    
+    list_save_phq <- list(
+      models = phq_model,
+      tbl_summary = table_summary,
+      coef_plot = p
+    )
+  
+    saveRDS(list_save_phq, paste0("./models/phq_",df$exposure_var[row] ,".rds"))
+    rm(list_save_phq)
+    
+  } else {
+
+    coef_names <- paste0(df$exposure_var[row], levels(scamp_f1[,df$exposure_var[row]])[-1])
+    names(coef_names) <- levels(scamp_f1[,df$exposure_var[row]])[-1]
+    saved_models <- readRDS(paste0("./models/phq_",df$exposure_var[row] ,".rds"))
+    phq_model <- saved_models$models
+    p <- plot_coefs(phq_model$model_uni_RE, phq_model$model_demo, phq_model$model_sleep, phq_model$model_phys, 
+                    coefs = coef_names )
+    table_summary <- saved_models$tbl_summary
+    
+  }
+  
+  print_html(table_summary)
+  
+  cat("\n")
+  cat("\n")
+  cat(paste0("#### Coefficients for Effect of **", df$exposure_full[row],"** on PHQ9 Score"))
+  cat("\n")
+  cat("\n")
+
+  print(p)
+  
+  cat("\n")
+  cat("\n")
+  
+  ### ANXIETY MODELS ###
+  
+  cat("\n")
+  cat("\n")
+  cat(paste0("#### Anxiety Model for exposure: **", df$exposure_full[row],"**"))
+  cat("\n")
+  cat("\n")
+  
+  if(!file.exists(paste0('./models/gad_', df$exposure_var[row], '.rds'))){
+    gad_model <- fit_gad_lm_F1(df$exposure_var[row], scamp_f1)
+    
+    table_summary <- jtools::export_summs(
+        gad_model$model_uni_RE, gad_model$model_demo,  
+        gad_model$model_phys, gad_model$model_sleep, gad_model$model_all,
+        error_format = "[{conf.low}, {conf.high}]",
+        # coefs = c("sns_mp_avg_BL", "ETHNICITY_DESCAsian"),
+        conf.method = "profile")
+    
+    coef_names <- paste0(df$exposure_var[row], levels(scamp_f1[,df$exposure_var[row]])[-1])
+    names(coef_names) <- levels(scamp_f1[,df$exposure_var[row]])[-1]
+    p <- plot_coefs(gad_model$model_uni_RE, gad_model$model_demo, gad_model$model_sleep, gad_model$model_phys, 
+                    coefs = coef_names  )
+    
+    list_save_gad <- list(
+      models = gad_model,
+      tbl_summary = table_summary,
+      coef_plot = p
+    )
+  
+    saveRDS(list_save_gad, paste0("./models/gad_",df$exposure_var[row] ,".rds"))
+    
+  } else {
+
+    coef_names <- paste0(df$exposure_var[row], levels(scamp_f1[,df$exposure_var[row]])[-1])
+    names(coef_names) <- levels(scamp_f1[,df$exposure_var[row]])[-1]
+    saved_models <- readRDS(paste0("./models/gad_",df$exposure_var[row] ,".rds"))
+    gad_model <- saved_models$models
+    p <- plot_coefs(gad_model$model_uni_RE, gad_model$model_demo, gad_model$model_sleep, gad_model$model_phys, 
+                    coefs = coef_names  )
+    table_summary <- saved_models$tbl_summary
+    
+  }
+  
+  print_html(table_summary)
+  
+  cat("\n")
+  cat("\n")
+  cat(paste0("#### Coefficients for Effect of **", df$exposure_full[row],"** on GAD7 Score"))
+  cat("\n")
+  cat("\n")
+
+  print(p)
+  
+  cat("\n")
+  cat("\n")
+
+  
+}
+
+
+```
+
+## Loop Fitting for Models for BASELINE MP usage on F1 Depression and Anxiety - *Continuous* avg weekly variables
+
+You can also embed plots, for example:
+
+```{r baseline_cont, echo=FALSE, results='asis'}
+
+df <- exposure_df %>% filter(factor_continuous == "continuous" & timepoint == "F1")
+
+for(row in 1:nrow(df)) { # ){
+  
+  ### DEPRESSION MODELS ###
+  
+  cat("\n")
+  cat("\n")
+  cat(paste0("#### Depression Model for exposure: **", df$exposure_full[row],"**"))
+  cat("\n")
+  cat("\n")
+  
+  if(!file.exists(paste0('./models/phq_', df$exposure_var[row], '.rds'))){
+    
+    internet_option <- ifelse(df$device_control[row] == "internet", TRUE, FALSE)
+    
+    phq_model <- fit_phq_lm_F1(df$exposure_var[row], scamp_f1, internet = internet_option, device_adjust = TRUE)
+    
+    table_summary <- jtools::export_summs(
+        phq_model$model_uni_RE, phq_model$model_demo,  
+        phq_model$model_phys, phq_model$model_sleep, phq_model$model_all,
+        error_format = "[{conf.low}, {conf.high}]",
+        # coefs = c("sns_mp_avg_BL", "ETHNICITY_DESCAsian"),
+        conf.method = "profile")
+    
+    # coef_names <- paste0(df$exposure_var[row], levels(scamp_f1[,df$exposure_var[row]])[-1])
+    # names(coef_names) <- levels(scamp_f1[,df$exposure_var[row]])[-1]
+    p <- plot_coefs(phq_model$model_uni_RE, phq_model$model_demo, phq_model$model_sleep, phq_model$model_phys, 
+                    coefs = df$exposure_var[row] )
+    
+    list_save_phq <- list(
+      models = phq_model,
+      tbl_summary = table_summary,
+      coef_plot = p
+    )
+  
+    saveRDS(list_save_phq, paste0("./models/phq_",df$exposure_var[row] ,".rds"))
+    rm(list_save_phq)
+    
+  } else {
+    saved_models <- readRDS(paste0("./models/phq_",df$exposure_var[row] ,".rds"))
+    phq_model <- saved_models$models
+    
+    coef <- df$exposure_var[row]
+    names(coef) <- df$exposure_full[row]
+    
+    p <- plot_coefs(phq_model$model_uni_RE, phq_model$model_demo, phq_model$model_sleep, phq_model$model_phys, 
+                    coefs = coef )
+    
+    table_summary <- saved_models$tbl_summary
+    
+  }
+  
+  print_html(table_summary)
+  
+  cat("\n")
+  cat("\n")
+  cat(paste0("#### Coefficients for Effect of **", df$exposure_full[row],"** on PHQ9 Score"))
+  cat("\n")
+  cat("\n")
+
+  print(p)
+  
+  cat("\n")
+  cat("\n")
+  
+  ### ANXIETY MODELS ###
+  
+  cat("\n")
+  cat("\n")
+  cat(paste0("#### Anxiety Model for exposure: **", df$exposure_full[row],"**"))
+  cat("\n")
+  cat("\n")
+  
+  if(!file.exists(paste0('./models/gad_', df$exposure_var[row], '.rds'))){
+    internet_option <- ifelse(df$device_control[row] == "internet", TRUE, FALSE)
+    
+    gad_model <- fit_gad_lm_F1(df$exposure_var[row], scamp_f1, internet = internet_option, device_adjust = TRUE)
+    
+    table_summary <- jtools::export_summs(
+        gad_model$model_uni_RE, gad_model$model_demo, 
+        gad_model$model_phys, gad_model$model_sleep, gad_model$model_all,
+        error_format = "[{conf.low}, {conf.high}]",
+        # coefs = c("sns_mp_avg_BL", "ETHNICITY_DESCAsian"),
+        conf.method = "profile")
+    
+    coef_name <- df$exposure_var[row]
+    # names(coef_names) <- levels(scamp_f1[,df$exposure_var[row]])[-1]
+    p <- plot_coefs(gad_model$model_uni_RE, gad_model$model_demo, gad_model$model_sleep, gad_model$model_phys, 
+                    coefs = df$exposure_var[row] )
+    
+    
+    list_save_gad <- list(
+      models = gad_model,
+      tbl_summary = table_summary,
+      coef_plot = p
+    )
+  
+    saveRDS(list_save_gad, paste0("./models/gad_",df$exposure_var[row] ,".rds"))
+    
+  } else {
+    saved_models <- readRDS(paste0("./models/gad_",df$exposure_var[row] ,".rds"))
+    gad_model <- saved_models$models
+    
+    coef <- df$exposure_var[row]
+    names(coef) <- df$exposure_full[row]
+    
+    p <- plot_coefs(gad_model$model_uni_RE, gad_model$model_demo, gad_model$model_sleep, gad_model$model_phys, 
+                    coefs = coef )
+    
+    table_summary <- saved_models$tbl_summary
+    
+  }
+  
+  print_html(table_summary)
+  
+  cat("\n")
+  cat("\n")
+  cat(paste0("#### Coefficients for Effect of **", df$exposure_full[row],"** on GAD7 Score"))
+  cat("\n")
+  cat("\n")
+
+  print(p)
+  
+  cat("\n")
+  cat("\n")
+
+  
+}
+
+```
+
+
