@@ -56,6 +56,18 @@ replace_6666 <- function(column_vector){
 }
 
 
+#Function to convert Age.Month Format
+convert_age <- function(age.months){
+  for (i in seq_along(age.months)){
+    if (!grepl("\\.", as.character(age.months[i])) & !is.na(age.months[i])){
+      age.months[i] <- as.character(paste0(age.months[i],".0"))
+    }
+  }
+  years <- as.numeric(sub("\\..*","",as.character(age.months)))
+  months <- as.numeric(sub(".*\\.","",as.character(age.months)))
+  return(years * 12 + months)
+}
+
 
 replace_with_codebook <- function(x, question){
   question <- gsub("_BL$", "", question)
@@ -191,6 +203,7 @@ psytools <- psytools %>%
   ) %>% fct_relevel(., get_labels(Q26_2_F1)) ) %>%
   mutate(calls_others_avg_BL = (5 * case_when(
     call_others_weekday_BL == "Never used" ~ 0,
+    call_others_weekday_BL == "Use own MP only" ~ 0,
     Q26_1_BL == 0 ~ 0,
     Q26_1_BL == 1 ~ 0.05,
     Q26_1_BL == 2 ~ 0.175,
@@ -201,6 +214,7 @@ psytools <- psytools %>%
     TRUE ~ NA_real_
   ) + 2 * case_when(
     call_others_weekend_BL == "Never used" ~ 0,
+    call_others_weekend_BL == "Use own MP only" ~ 0,
     Q26_2_BL == 0 ~ 0,
     Q26_2_BL == 1 ~ 0.05,
     Q26_2_BL == 2 ~ 0.175,
@@ -213,6 +227,7 @@ psytools <- psytools %>%
   ) %>%
   mutate(calls_others_avg_F1 = (5 * case_when(
     call_others_weekday_F1 == "Never used" ~ 0,
+    call_others_weekday_F1 == "Use own MP only" ~ 0,
     Q26_1_F1 == 0 ~ 0,
     Q26_1_F1 == 1 ~ 0.05,
     Q26_1_F1 == 2 ~ 0.175,
@@ -223,6 +238,7 @@ psytools <- psytools %>%
     TRUE ~ NA_real_
   ) + 2 * case_when(
     call_others_weekend_F1 == "Never used" ~ 0,
+    call_others_weekend_F1 == "Use own MP only" ~ 0,
     Q26_2_F1 == 0 ~ 0,
     Q26_2_F1 == 1 ~ 0.05,
     Q26_2_F1 == 2 ~ 0.175,
@@ -408,6 +424,8 @@ psytools <- psytools %>%
   ) %>% fct_relevel(c(get_labels(Q20_2_F1), "Do not own", "No internet"))) %>%
   
   mutate(internet_avg_BL = (5 * case_when(
+    internet_weekday_BL == "Do not own" ~ 0,
+    internet_weekday_BL == "No internet" ~ 0,
     Q20_1_BL == 0 ~ 0,
     Q20_1_BL == 1 ~ 0.092,
     Q20_1_BL == 2 ~ 0.342,
@@ -418,6 +436,8 @@ psytools <- psytools %>%
     Q20_1_BL == 7 ~ 7,
     TRUE ~ NA_real_
   ) + 2 * case_when(
+    internet_weekend_BL == "Do not own" ~ 0,
+    internet_weekend_BL == "No internet" ~ 0,
     Q20_2_BL == 0 ~ 0,
     Q20_2_BL == 1 ~ 0.092,
     Q20_2_BL == 2 ~ 0.342,
@@ -430,6 +450,8 @@ psytools <- psytools %>%
   )) / 7
   ) %>%
   mutate(internet_avg_F1 = (5 * case_when(
+    internet_weekday_F1 == "Do not own" ~ 0,
+    internet_weekday_F1 == "No internet" ~ 0,
     Q20_1_F1 == 0 ~ 0,
     Q20_1_F1 == 1 ~ 0.092,
     Q20_1_F1 == 2 ~ 0.342,
@@ -440,6 +462,8 @@ psytools <- psytools %>%
     Q20_1_F1 == 7 ~ 7,
     TRUE ~ NA_real_
   ) + 2 * case_when(
+    internet_weekend_F1 == "Do not own" ~ 0,
+    internet_weekend_F1 == "No internet" ~ 0,
     Q20_2_F1 == 0 ~ 0,
     Q20_2_F1 == 1 ~ 0.092,
     Q20_2_F1 == 2 ~ 0.342,
@@ -452,11 +476,35 @@ psytools <- psytools %>%
   )) / 7
   ) %>%
   ## Number of instant messages per week
-  mutate(im_weekday_BL = replace_with_codebook(Q17_1_BL, "Q17_1_BL")) %>%
-  mutate(im_weekend_BL = replace_with_codebook(Q17_2_BL, "Q17_2_BL")) %>%
-  mutate(im_weekday_F1 = replace_with_codebook(Q17_1_F1, "Q17_1_F1")) %>%
-  mutate(im_weekend_F1 = replace_with_codebook(Q17_2_F1, "Q17_2_F1")) %>%
+  mutate(im_weekday_BL = replace_with_codebook(Q17_1_BL, "Q17_1_BL") %>% as.character()) %>%
+  mutate(im_weekend_BL = replace_with_codebook(Q17_2_BL, "Q17_2_BL") %>% as.character()) %>%
+  mutate(im_weekday_F1 = replace_with_codebook(Q17_1_F1, "Q17_1_F1") %>% as.character()) %>%
+  mutate(im_weekend_F1 = replace_with_codebook(Q17_2_F1, "Q17_2_F1") %>% as.character()) %>%
+  
+  mutate(im_weekday_BL = case_when(
+    Q1_1_BL == 0 ~ "Do not own",
+    Q3_1_BL == 0 ~ "Do not own",
+    TRUE ~ im_weekday_BL
+  ) %>% fct_relevel(., get_labels(Q17_1_BL))) %>%
+  mutate(im_weekday_F1 = case_when(
+    Q1_1_F1 == 0 ~ "Do not own",
+    Q3_1_F1 == 0 ~ "Do not own",
+    TRUE ~ im_weekday_F1
+  ) %>% fct_relevel(., get_labels(Q17_1_F1)) ) %>%
+  mutate(im_weekend_BL = case_when(
+    Q1_1_BL == 0 ~ "Do not own",
+    Q3_1_BL == 0 ~ "Do not own",
+    TRUE ~ im_weekend_BL
+  ) %>% fct_relevel(., get_labels(Q17_2_BL)) ) %>%
+  mutate(im_weekend_F1 = case_when(
+    Q1_1_F1 == 0 ~ "Do not own",
+    Q3_1_F1 == 0 ~ "Do not own",
+    TRUE ~ im_weekend_F1
+  ) %>% fct_relevel(., get_labels(Q17_2_F1)) ) %>%
+  
+  
   mutate(im_avg_BL = (5 * case_when(
+    im_weekday_BL == "Do not own" ~ 0,
     Q17_1_BL == 0 ~ 0,
     Q17_1_BL == 1 ~ (1+5)/2,
     Q17_1_BL == 2 ~ (6+10)/2,
@@ -466,6 +514,7 @@ psytools <- psytools %>%
     Q17_1_BL == 6 ~ 101,
     TRUE ~ NA_real_
   ) + 2 * case_when(
+    im_weekend_BL == "Do not own" ~ 0,
     Q17_2_BL == 0 ~ 0,
     Q17_2_BL == 1 ~ (1+5)/2,
     Q17_2_BL == 2 ~ (6+10)/2,
@@ -477,6 +526,7 @@ psytools <- psytools %>%
   )) / 7
   ) %>%
   mutate(im_avg_F1 = (5 * case_when(
+    im_weekday_F1 == "Do not own" ~ 0,
     Q17_1_F1 == 0 ~ 0,
     Q17_1_F1 == 1 ~ (1+5)/2,
     Q17_1_F1 == 2 ~ (6+10)/2,
@@ -486,6 +536,7 @@ psytools <- psytools %>%
     Q17_1_F1 == 6 ~ 101,
     TRUE ~ NA_real_
   ) + 2 * case_when(
+    im_weekend_F1 == "Do not own" ~ 0,
     Q17_2_F1 == 0 ~ 0,
     Q17_2_F1 == 1 ~ (1+5)/2,
     Q17_2_F1 == 2 ~ (6+10)/2,
@@ -497,11 +548,34 @@ psytools <- psytools %>%
   )) / 7
   ) %>%
   ### Number of text messages
-  mutate(text_weekday_BL = replace_with_codebook(Q16_1_BL, "Q16_1_BL")) %>%
-  mutate(text_weekend_BL = replace_with_codebook(Q16_2_BL, "Q16_2_BL")) %>%
-  mutate(text_weekday_F1 = replace_with_codebook(Q16_1_F1, "Q16_1_F1")) %>%
-  mutate(text_weekend_F1 = replace_with_codebook(Q16_2_F1, "Q16_2_F1")) %>%
+  mutate(text_weekday_BL = replace_with_codebook(Q16_1_BL, "Q16_1_BL") %>% as.character()) %>%
+  mutate(text_weekend_BL = replace_with_codebook(Q16_2_BL, "Q16_2_BL") %>% as.character()) %>%
+  mutate(text_weekday_F1 = replace_with_codebook(Q16_1_F1, "Q16_1_F1") %>% as.character()) %>%
+  mutate(text_weekend_F1 = replace_with_codebook(Q16_2_F1, "Q16_2_F1") %>% as.character()) %>%
+  
+  mutate(text_weekday_BL = case_when(
+    Q1_1_BL == 0 ~ "Do not own",
+    Q3_1_BL == 0 ~ "Do not own",
+    TRUE ~ text_weekday_BL
+  ) %>% fct_relevel(., get_labels(Q16_1_BL))) %>%
+  mutate(text_weekday_F1 = case_when(
+    Q1_1_F1 == 0 ~ "Do not own",
+    Q3_1_F1 == 0 ~ "Do not own",
+    TRUE ~ text_weekday_F1
+  ) %>% fct_relevel(., get_labels(Q16_1_F1)) ) %>%
+  mutate(text_weekend_BL = case_when(
+    Q1_1_BL == 0 ~ "Do not own",
+    Q3_1_BL == 0 ~ "Do not own",
+    TRUE ~ text_weekend_BL
+  ) %>% fct_relevel(., get_labels(Q16_2_BL)) ) %>%
+  mutate(text_weekend_F1 = case_when(
+    Q1_1_F1 == 0 ~ "Do not own",
+    Q3_1_F1 == 0 ~ "Do not own",
+    TRUE ~ text_weekend_F1
+  ) %>% fct_relevel(., get_labels(Q16_2_F1)) ) %>%
+  
   mutate(text_avg_BL = (5 * case_when(
+    text_weekday_BL == "Do not own" ~ 0,
     Q16_1_BL == 0 ~ 0,
     Q16_1_BL == 1 ~ (1+5)/2,
     Q16_1_BL == 2 ~ (6+10)/2,
@@ -511,6 +585,7 @@ psytools <- psytools %>%
     Q16_1_BL == 6 ~ 101,
     TRUE ~ NA_real_
   ) + 2 * case_when(
+    text_weekend_BL == "Do not own" ~ 0,
     Q16_2_BL == 0 ~ 0,
     Q16_2_BL == 1 ~ (1+5)/2,
     Q16_2_BL == 2 ~ (6+10)/2,
@@ -522,6 +597,7 @@ psytools <- psytools %>%
   )) / 7
   ) %>%
   mutate(text_avg_F1 = (5 * case_when(
+    text_weekday_F1 == "Do not own" ~ 0,
     Q16_1_F1 == 0 ~ 0,
     Q16_1_F1 == 1 ~ (1+5)/2,
     Q16_1_F1 == 2 ~ (6+10)/2,
@@ -531,6 +607,7 @@ psytools <- psytools %>%
     Q16_1_F1 == 6 ~ 101,
     TRUE ~ NA_real_
   ) + 2 * case_when(
+    text_weekend_F1 == "Do not own" ~ 0,
     Q16_2_F1 == 0 ~ 0,
     Q16_2_F1 == 1 ~ (1+5)/2,
     Q16_2_F1 == 2 ~ (6+10)/2,
@@ -541,63 +618,8 @@ psytools <- psytools %>%
     TRUE ~ NA_real_
   )) / 7
   ) %>%
-  ### Add exposure covariate factors for FOLLOWUP
-  # Parental control
-  mutate(parental_control_F1 = case_when(
-    Q1_1_F1 == 0 ~ "never_used_phone",
-    Q27_1_F1 == 9999 ~ NA_character_,
-    Q27_1_F1 == 1 ~ "yes",
-    Q27_1_F1 == 0 ~ "no",
-    TRUE~ NA_character_
-  ) %>% as.factor()) %>% 
-  mutate(ever_owned_F1 = as.factor(Q1_1_F1)) %>% # Ever owned
-  # Do you currently own? 
-  mutate(current_own_F1 = case_when(
-    Q1_1_F1 == 0 ~ "never_owned",
-    Q3_1_F1 == 9999 ~ NA_character_,
-    Q3_1_F1 == 0 ~ "never_owned",
-    Q3_1_F1 == 1 ~ "used_to_own",
-    Q3_1_F1 == 2 ~ "own_one",
-    Q3_1_F1 == 3 ~ "own_two_plus",
-    TRUE~ NA_character_
-  )) %>% 
-  # What year did you get a phone?
-  mutate(first_phone_year_F1 = case_when(
-    Q4_1_F1 == 7777 | Q4_1_F1 == 8888 | Q4_1_F1 == 9999 ~ NA_integer_,
-    TRUE ~ Q4_1_F1
-  )) %>% 
-  # Internet enabled?
-  mutate(int_enabled_F1 = case_when(
-    Q1_1_F1 == 0 ~ "never_owned",
-    current_own_F1 == "never_owned" ~ "never_owned",
-    current_own_F1 == "used_to_own" ~ "used_to_own",
-    Q6_1_F1 == 0 ~ "no",
-    Q6_1_F1 == 1 ~ "no",
-    Q6_1_F1 == 2 ~ "network_wifi",
-    Q6_1_F1 == 3 ~ "wifi_only",
-    Q6_1_F1 == 4 ~ "network_only",
-    TRUE ~ NA_character_
-  )) %>% # Is it internet enabled?
-  # is it a smartphone?
-  mutate(smartphone_F1 = case_when(
-    Q1_1_F1 == 0 ~ "never_owned",
-    current_own_F1 == "never_owned" ~ "never_owned",
-    current_own_F1 == "used_to_own" ~ "used_to_own",
-    Q7_1_F1 == 0 ~ "no",
-    Q7_1_F1 == 1 ~ "yes",
-    TRUE~ NA_character_
-  )) %>%
-  # First year smartphone
-  mutate(smartphone_year_status_F1 = case_when(
-    Q8_1_F1 == 8888 ~ "no_smartphone", 
-    Q8_1_F1 == 9999 ~ NA_character_, 
-    Q8_1_F1 == 7777 ~ "don't_know", 
-    TRUE ~ as.character(Q8_1_F1)
-  )) %>%
-  mutate(smartphone_year_value_F1 = case_when(
-    Q8_1_F1 == 8888  | Q8_1_F1 == 9999 | Q8_1_F1 == 7777 ~ NA_integer_,
-    TRUE ~ Q8_1_F1
-  )) %>%
+
+  
   ### Add exposure covariate factors for BASELINE
   # Parental control
   mutate(parental_control_BL = case_when(
@@ -606,7 +628,8 @@ psytools <- psytools %>%
     Q27_1_BL == 1 ~ "yes",
     Q27_1_BL == 0 ~ "no",
     TRUE~ NA_character_
-  ) %>% as.factor()) %>% 
+  ) %>% as.factor()) %>%
+  mutate(parental_control_BL = fct_relevel(parental_control_BL, "no")) %>%
   mutate(ever_owned_BL = replace_with_codebook(Q1_1_BL, "Q1_1_BL")) %>% # Ever owned
   # Do you currently own? 
   mutate(current_own_BL = case_when(
@@ -665,6 +688,7 @@ psytools <- psytools %>%
     Q27_1_F1 == 0 ~ "no",
     TRUE~ NA_character_
   ) %>% as.factor()) %>% 
+  mutate(parental_control_F1 = fct_relevel(parental_control_F1, "no")) %>%
   mutate(ever_owned_F1 = as.factor(Q1_1_F1)) %>% # Ever owned
   # Do you currently own? 
   mutate(current_own_F1 = case_when(
@@ -713,6 +737,8 @@ psytools <- psytools %>%
     Q8_1_F1 == 8888  | Q8_1_F1 == 9999 | Q8_1_F1 == 7777 ~ NA_integer_,
     TRUE ~ Q8_1_F1
   )) %>%
+  
+  
   # Condition phone ownership variables
   mutate(ownership_BL = case_when(
     current_own_BL == "own_one" | current_own_BL == "own_two_plus" ~ "yes",
@@ -1100,8 +1126,64 @@ psytools <- psytools %>%
   mutate(physical_activity_quintile = fct_relevel(
     physical_activity_quintile, 
     levels(cut(physical_activity, breaks=5))[3]
-    ))
+    )) %>%
 
-# write.csv(psytools, "./data/psytools_cleaned.csv", row.names = FALSE)
+  mutate(phq_cat = case_when(
+    phq_sum <= 9 ~ "None/mild",
+    phq_sum <= 14 ~ "Moderate",
+    phq_sum <= 19 ~ "Moderately severe",
+    phq_sum <= 27 ~ "Severe",
+    TRUE ~ NA_character_
+  )) %>%
+  mutate(phq_cat = factor(
+    phq_cat,
+    ordered = TRUE,
+    levels=c("None/mild","Moderate","Moderately severe","Severe"))) %>%
+  mutate(phq_cat_num = as.numeric(phq_cat)-1) %>%
+
+## Transform GAD data to categories
+  mutate(gad_cat = case_when(
+    gad_sum <= 9 ~ "None/mild",
+    gad_sum <= 14 ~ "Moderate",
+    gad_sum <= 21 ~ "Severe",
+    TRUE ~ NA_character_
+  )) %>%
+  mutate(gad_cat = factor(
+    gad_cat,
+    ordered = TRUE,
+    levels=c("None/mild","Moderate","Severe"))) %>%
+  mutate(gad_cat_num = as.numeric(gad_cat)-1)%>%
+  mutate(internet_F1 = case_when(
+    internet_F1 == "yes" ~ "yes",
+    internet_F1 == "do not own" ~ "no",
+    internet_F1 == "phone without internet" ~ "no",
+    TRUE ~ NA_character_
+  )) %>%
+  mutate(internet_F1 = fct_relevel(factor(internet_F1), "yes")) %>%
+  mutate(ownership_binary_F1 = case_when(
+    ownership_F1 == "yes" ~ "yes",
+    ownership_F1 == "never_owned" ~ "no",
+    ownership_F1 == "used_to_own" ~ "no",
+    TRUE ~ NA_character_
+  )) %>%
+  mutate(ownership_binary_F1 = fct_relevel(factor(ownership_binary_F1), "yes"))  %>%
+  mutate(internet_BL = case_when(
+    internet_BL == "yes" ~ "yes",
+    internet_BL == "do not own" ~ "no",
+    internet_BL == "phone without internet" ~ "no",
+    TRUE ~ NA_character_
+  )) %>%
+  mutate(internet_BL = fct_relevel(factor(internet_BL), "yes")) %>%
+  mutate(ownership_binary_BL = case_when(
+    ownership_BL == "yes" ~ "yes",
+    ownership_BL == "never_owned" ~ "no",
+    ownership_BL == "used_to_own" ~ "no",
+    TRUE ~ NA_character_
+  )) %>%
+  mutate(ownership_binary_BL = fct_relevel(factor(ownership_binary_BL), "yes")) %>%
+  mutate(AGE_BL = convert_age(psytools$AGE_BL) /12) %>%
+  mutate(AGE_F1 = convert_age(psytools$AGE_F1) /12)
+
+#write.csv(psytools, "./data/psytools_cleaned.csv", row.names = FALSE)
 
 
