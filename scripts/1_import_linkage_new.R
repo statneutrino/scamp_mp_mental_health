@@ -95,5 +95,5 @@ imd_link <- imd %>%
 psytools <- psytools %>%
   left_join(imd_link, by="SCAMP_ID", na_matches = "never")
 
-write.csv(psytools, "./data/psytools_school.csv", row.names=FALSE)
+#write.csv(psytools, "./data/psytools_school.csv", row.names=FALSE)
   

@@ -400,10 +400,10 @@ psytools <- psytools %>%
   ) %>% fct_relevel(c(get_labels(Q20_1_BL), "Do not own", "No internet"))) %>%
   
   mutate(internet_weekday_F1 = case_when(
-    Q1_1_BL == 0 ~ "Do not own",
-    Q3_1_BL == 0 ~ "Do not own",
-    Q6_1_BL == 0 ~ "No internet",
-    Q6_1_BL == 1 ~ "No internet",
+    Q1_1_F1 == 0 ~ "Do not own",
+    Q3_1_F1 == 0 ~ "Do not own",
+    Q6_1_F1 == 0 ~ "No internet",
+    Q6_1_F1 == 1 ~ "No internet",
     TRUE ~ internet_weekday_F1
   ) %>% fct_relevel(c(get_labels(Q20_1_F1), "Do not own", "No internet"))) %>%
   
@@ -416,10 +416,10 @@ psytools <- psytools %>%
   ) %>% fct_relevel(c(get_labels(Q20_2_BL), "Do not own", "No internet"))) %>%
   
   mutate(internet_weekend_F1 = case_when(
-    Q1_1_BL == 0 ~ "Do not own",
-    Q3_1_BL == 0 ~ "Do not own",
-    Q6_1_BL == 0 ~ "No internet",
-    Q6_1_BL == 1 ~ "No internet",
+    Q1_1_F1 == 0 ~ "Do not own",
+    Q3_1_F1 == 0 ~ "Do not own",
+    Q6_1_F1 == 0 ~ "No internet",
+    Q6_1_F1 == 1 ~ "No internet",
     TRUE ~ internet_weekend_F1
   ) %>% fct_relevel(c(get_labels(Q20_2_F1), "Do not own", "No internet"))) %>%
   
@@ -471,7 +471,7 @@ psytools <- psytools %>%
     Q20_2_F1 == 4 ~ 1.5,
     Q20_2_F1 == 5 ~ 3.5,
     Q20_2_F1 == 6 ~ 5.5, 
-    Q20_1_F1 == 7 ~ 7,
+    Q20_2_F1 == 7 ~ 7,
     TRUE ~ NA_real_
   )) / 7
   ) %>%
